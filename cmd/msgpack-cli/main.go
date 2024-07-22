@@ -7,11 +7,19 @@ import (
 )
 
 func main() {
-	jsonData := []byte("jsonData")
+	jsonData := []byte(`""`)
 
-	mp := msgpack.JSONToMessagePack(jsonData)
-	fmt.Printf("mp: \"%v\" (%v)\n", mp, string(mp.Bytecode))
+	mp, err := msgpack.JSONToMessagePack(jsonData)
+	fmt.Printf("mp: %v (%v), err: %v\n", formatBytecode(mp), string(mp), err)
+}
 
-	jsonData2, err := msgpack.MessagePackToJSON(mp)
-	fmt.Printf("jsonData2: \"%v\" (%v), err: %v\n", jsonData2, string(jsonData2), err)
+// TODO: remove
+func formatBytecode(bytecode []byte) (s string) {
+	for _, b := range bytecode {
+		s += fmt.Sprintf("% #02x", b)
+	}
+	if len(s) > 0 { // remove leading space
+		s = s[1:]
+	}
+	return s
 }
