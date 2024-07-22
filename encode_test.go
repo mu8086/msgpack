@@ -29,7 +29,41 @@ func Test_encode(t *testing.T) {
 	}
 }
 
-// TODO:
+func Test_encodeBool(t *testing.T) {
+	var buf bytes.Buffer
+
+	type args struct {
+		value   bool
+		encoded []byte
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		{name: "want false, got false", args: args{false, []byte{0xC2}}, wantErr: false},
+		// TODO: {name: "want false, got true", args: args{false, []byte{0xC3}}, wantErr: false},
+		{name: "want true, got true", args: args{true, []byte{0xC3}}, wantErr: false},
+		// TODO: {name: "want true, got false", args: args{true, []byte{0xC2}}, wantErr: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			buf.Reset()
+
+			if err := encodeBool(&buf, tt.args.value); (err != nil) != tt.wantErr {
+				t.Errorf("encodeBool() error = %v, wantErr %v", err, tt.wantErr)
+			}
+
+			b, err := buf.ReadByte()
+			if b != tt.args.encoded[0] {
+				t.Errorf("encoded not match, want: %v, got: %v\n", tt.args.encoded[0], b)
+			} else if err != nil {
+				t.Errorf("buf.ReadByte() failed, err: %v\n", err)
+			}
+		})
+	}
+}
+
 func Test_encodeString(t *testing.T) {
 	var buf bytes.Buffer
 
@@ -67,9 +101,9 @@ func Test_encodeString(t *testing.T) {
 			for _, prefixByte := range tt.args.encodedPrefix {
 				b, err := buf.ReadByte()
 				if b != prefixByte {
-					t.Errorf("prefix not match, prefix: %v, read: %v\n", prefixByte, b)
+					t.Errorf("prefix not match, want: %v, got: %v\n", prefixByte, b)
 				} else if err != nil {
-					t.Errorf("readbyte failed\n")
+					t.Errorf("buf.ReadByte() failed, err: %v\n", err)
 				}
 			}
 		})

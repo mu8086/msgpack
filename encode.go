@@ -6,11 +6,20 @@ import (
 
 func encode(buf *bytes.Buffer, data interface{}) error {
 	switch v := data.(type) {
+	case bool:
+		return encodeBool(buf, v)
 	case string:
 		return encodeString(buf, v)
 	default:
 		return ErrUnsupportedType
 	}
+}
+
+func encodeBool(buf *bytes.Buffer, v bool) error {
+	if !v {
+		return buf.WriteByte(0xC2)
+	}
+	return buf.WriteByte(0xC3)
 }
 
 func encodeString(buf *bytes.Buffer, value string) error {
