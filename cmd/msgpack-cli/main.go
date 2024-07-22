@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/mu8086/msgpack/pkg/msgpack"
+	"github.com/mu8086/msgpack"
 )
 
 func main() {
