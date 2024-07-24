@@ -3,6 +3,7 @@ package msgpack
 import (
 	"bytes"
 	"encoding/binary"
+	"math"
 )
 
 func encode(buf *bytes.Buffer, data interface{}) error {
@@ -36,7 +37,18 @@ func encodeBool(buf *bytes.Buffer, value bool) error {
 	return buf.WriteByte(0xC3)
 }
 
-func encodeFloat(_ *bytes.Buffer, _ float64) error {
+func encodeFloat(buf *bytes.Buffer, value float64) error {
+	if float64(float32(value)) == value {
+		// float 32 (0xCA)
+		buf.WriteByte(0xCA)
+		bits := math.Float32bits(float32(value))
+		binary.Write(buf, binary.BigEndian, bits)
+	} else {
+		// float 64 (0xCB)
+		buf.WriteByte(0xCB)
+		bits := math.Float64bits(value)
+		binary.Write(buf, binary.BigEndian, bits)
+	}
 	return nil
 }
 
