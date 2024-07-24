@@ -17,8 +17,11 @@ func NewMessagePackDecoder(data []byte) *MessagePackDecoder {
 }
 
 func (dec *MessagePackDecoder) Decode() (interface{}, error) {
+	tag := "[MessagePackDecoder.Decode]"
+
 	b, err := dec.reader.ReadByte()
 	if err != nil {
+		fmt.Printf("%v ReadByte failed, err: %v\n", tag, err)
 		return nil, err
 	}
 
@@ -48,6 +51,7 @@ func (dec *MessagePackDecoder) Decode() (interface{}, error) {
 
 	// never used
 	case b == 0xC1:
+		fmt.Printf("%v 0x%02X not used in MessagePack\n", tag, b)
 		return nil, ErrUnsupportedType
 
 	// false
@@ -167,6 +171,7 @@ func (dec *MessagePackDecoder) Decode() (interface{}, error) {
 		return int8(b), nil
 
 	default:
+		fmt.Printf("%v 0x%02X not defined in MessagePack\n", tag, b)
 		return "", ErrUnsupportedType
 	}
 
@@ -174,11 +179,14 @@ func (dec *MessagePackDecoder) Decode() (interface{}, error) {
 }
 
 func (dec *MessagePackDecoder) readArray(length int) ([]interface{}, error) {
+	tag := "[MessagePackDecoder.readArray]"
+
 	data := make([]interface{}, length, length)
 
 	for i := 0; i < int(length); i++ {
 		element, err := dec.Decode()
 		if err != nil {
+			fmt.Printf("%v Decode failed, err: %v\n", tag, err)
 			return nil, err
 		}
 
@@ -189,8 +197,11 @@ func (dec *MessagePackDecoder) readArray(length int) ([]interface{}, error) {
 }
 
 func (dec *MessagePackDecoder) readArrayWithLengthInBits(lengthInBits int) ([]interface{}, error) {
+	tag := "[MessagePackDecoder.readArrayWithLengthInBits]"
+
 	length, err := dec.readLength(lengthInBits)
 	if err != nil {
+		fmt.Printf("%v readLength failed, err: %v\n", tag, err)
 		return nil, err
 	}
 
@@ -198,15 +209,22 @@ func (dec *MessagePackDecoder) readArrayWithLengthInBits(lengthInBits int) ([]in
 }
 
 func (dec *MessagePackDecoder) readBinWithLengthInBits(lengthInBits int) ([]byte, error) {
+	tag := "[MessagePackDecoder.readBinWithLengthInBits]"
+
 	length, err := dec.readLength(lengthInBits)
 	if err != nil {
+		fmt.Printf("%v readLength failed, err: %v\n", tag, err)
 		return nil, err
 	}
 
 	binData := make([]byte, length, length)
 	err = binary.Read(dec.reader, binary.BigEndian, &binData)
+	if err != nil {
+		fmt.Printf("%v Read failed, err: %v\n", tag, err)
+		return nil, err
+	}
 
-	return binData, err
+	return binData, nil
 }
 
 func (dec *MessagePackDecoder) readBytes(data interface{}) error {
@@ -244,9 +262,11 @@ func (dec *MessagePackDecoder) readInt64() (data int64, err error) {
 }
 
 func (dec *MessagePackDecoder) readLength(bits int) (int64, error) {
-	fmt.Printf("bits: %v\n", bits)
+	tag := "[MessagePackDecoder.readLength]"
+
 	// not a multiple of 8
 	if (bits & 0x7) != 0 {
+		fmt.Printf("%v bits(%v) not a multiple of 8\n", tag, bits)
 		return 0, ErrLengthInvalid
 	}
 
@@ -258,6 +278,7 @@ func (dec *MessagePackDecoder) readLength(bits int) (int64, error) {
 
 		b, err := dec.reader.ReadByte()
 		if err != nil {
+			fmt.Printf("%v ReadByte failed, err: %v\n", tag, err)
 			return 0, ErrReadByte
 		}
 
@@ -268,21 +289,26 @@ func (dec *MessagePackDecoder) readLength(bits int) (int64, error) {
 }
 
 func (dec *MessagePackDecoder) readMap(length int) (map[string]interface{}, error) {
+	tag := "[MessagePackDecoder.readMap]"
+
 	m := make(map[string]interface{}, length)
 
 	for i := 0; i < length; i++ {
 		key, err := dec.Decode()
 		if err != nil {
+			fmt.Printf("%v Decode key failed, err: %v\n", tag, err)
 			return nil, err
 		}
 
 		keyStr, ok := key.(string)
 		if !ok {
+			fmt.Printf("%v key not a string\n", tag)
 			return nil, ErrUnsupportedType
 		}
 
 		value, err := dec.Decode()
 		if err != nil {
+			fmt.Printf("%v Decode value failed, err: %v\n", tag, err)
 			return nil, err
 		}
 
@@ -293,8 +319,11 @@ func (dec *MessagePackDecoder) readMap(length int) (map[string]interface{}, erro
 }
 
 func (dec *MessagePackDecoder) readMapWithLengthInBits(lengthInBits int) (map[string]interface{}, error) {
+	tag := "[MessagePackDecoder.readMapWithLengthInBits]"
+
 	length, err := dec.readLength(lengthInBits)
 	if err != nil {
+		fmt.Printf("%v readLength failed, err: %v\n", tag, err)
 		return nil, err
 	}
 
@@ -302,8 +331,11 @@ func (dec *MessagePackDecoder) readMapWithLengthInBits(lengthInBits int) (map[st
 }
 
 func (dec *MessagePackDecoder) readStrWithLengthInBits(lengthInBits int) (string, error) {
+	tag := "[MessagePackDecoder.readStrWithLengthInBits]"
+
 	length, err := dec.readLength(lengthInBits)
 	if err != nil {
+		fmt.Printf("%v readLength failed, err: %v\n", tag, err)
 		return "", err
 	}
 
@@ -311,29 +343,56 @@ func (dec *MessagePackDecoder) readStrWithLengthInBits(lengthInBits int) (string
 }
 
 func (dec *MessagePackDecoder) readString(length int) (string, error) {
+	tag := "[MessagePackDecoder.readString]"
+
 	buf := make([]byte, length)
 	if _, err := dec.reader.Read(buf); err != nil {
+		fmt.Printf("%v Read failed, err: %v\n", tag, err)
 		return "", err
 	}
 	return string(buf), nil
 }
 
 func (dec *MessagePackDecoder) readUint8() (data uint8, err error) {
+	tag := "[MessagePackDecoder.readUint8]"
+
 	err = binary.Read(dec.reader, binary.BigEndian, &data)
-	return data, err
+	if err != nil {
+		fmt.Printf("%v Read failed, err: %v\n", tag, err)
+		return 0, err
+	}
+	return data, nil
 }
 
 func (dec *MessagePackDecoder) readUint16() (data uint16, err error) {
+	tag := "[MessagePackDecoder.readUint16]"
+
 	err = binary.Read(dec.reader, binary.BigEndian, &data)
+	if err != nil {
+		fmt.Printf("%v Read failed, err: %v\n", tag, err)
+		return 0, err
+	}
 	return data, err
 }
 
 func (dec *MessagePackDecoder) readUint32() (data uint32, err error) {
+	tag := "[MessagePackDecoder.readUint32]"
+
 	err = binary.Read(dec.reader, binary.BigEndian, &data)
+	if err != nil {
+		fmt.Printf("%v Read failed, err: %v\n", tag, err)
+		return 0, err
+	}
 	return data, err
 }
 
 func (dec *MessagePackDecoder) readUint64() (data uint64, err error) {
+	tag := "[MessagePackDecoder.readUint64]"
+
 	err = binary.Read(dec.reader, binary.BigEndian, &data)
+	if err != nil {
+		fmt.Printf("%v Read failed, err: %v\n", tag, err)
+		return 0, err
+	}
 	return data, err
 }
