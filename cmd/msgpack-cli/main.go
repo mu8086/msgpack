@@ -4,27 +4,25 @@ import (
 	"fmt"
 
 	"github.com/mu8086/msgpack"
+	"github.com/spf13/viper"
 )
 
 func main() {
+	viper.SetConfigName("config")
+	viper.SetConfigType("toml")
+	viper.AddConfigPath(".")
+	err := viper.ReadInConfig() // Find and read the config file
+	if err != nil {             // Handle errors reading the config file
+		panic(fmt.Errorf("fatal error config file: %w", err))
+	}
+
+	if err := msgpack.InitConstants(); err != nil {
+		panic(fmt.Errorf(err.Error()))
+	}
+
 	jsonData := []byte(
 		`{
-			"0": true,
-			"1": true,
-			"2": true,
-			"3": true,
-			"4": true,
-			"5": true,
-			"6": true,
-			"7": true,
-			"8": true,
-			"9": true,
-			"A": true,
-			"B": true,
-			"C": true,
-			"D": true,
-			"E": true,
-			"F": true
+			"binary_data": "MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDEyMzQ1Ng=="
 		}`)
 
 	mp, err := msgpack.JSONToMessagePack(jsonData)

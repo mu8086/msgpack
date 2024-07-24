@@ -2,6 +2,7 @@ package msgpack
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/binary"
 	"fmt"
 	"math"
@@ -31,6 +32,43 @@ func encode(buf *bytes.Buffer, data interface{}) error {
 		fmt.Printf("v: %T, %v\n", v, v)
 		return ErrUnsupportedType
 	}
+}
+
+func encodeBinary(buf *bytes.Buffer, value interface{}) error {
+	base64Str, ok := value.(string)
+	if !ok {
+		return ErrBinaryDataInvalid
+	}
+
+	binData, err := base64.StdEncoding.DecodeString(base64Str)
+	if err != nil {
+		return err
+	}
+
+	length := len(binData)
+
+	switch {
+	// bin 8 (0xC4)
+	case length <= 0xFF: // 2^8 - 1
+		buf.WriteByte(0xC4)
+		binary.Write(buf, binary.BigEndian, int8(length))
+
+	// bin 16 (0xC5)
+	case length <= 0xFFFF: // 2^16 - 1
+		buf.WriteByte(0xC5)
+		binary.Write(buf, binary.BigEndian, int16(length))
+
+	// bin 32 (0xC6)
+	case length <= 0xFFFFFFFF: // 2^32 - 1
+		buf.WriteByte(0xC6)
+		binary.Write(buf, binary.BigEndian, int32(length))
+
+	default:
+		return ErrBinaryTooLong
+	}
+
+	buf.Write(binData)
+	return nil
 }
 
 func encodeBool(buf *bytes.Buffer, value bool) error {
@@ -120,8 +158,15 @@ func encodeMap(buf *bytes.Buffer, value map[string]interface{}) error {
 		if err := encodeString(buf, key); err != nil {
 			return err
 		}
-		if err := encode(buf, val); err != nil {
-			return err
+
+		if key == binaryKeyword {
+			if err := encodeBinary(buf, val); err != nil {
+				return err
+			}
+		} else {
+			if err := encode(buf, val); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
