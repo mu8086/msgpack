@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-
-	"github.com/mu8086/msgpack/dto"
 )
 
 func JSONToMessagePack(jsonData []byte) ([]byte, error) {
@@ -24,6 +22,17 @@ func JSONToMessagePack(jsonData []byte) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func MessagePackToJSON(mp dto.MessagePack) ([]byte, error) {
-	return mp.MarshalJSON()
+func MessagePackToJSON(mp []byte) (string, error) {
+	decoder := NewMessagePackDecoder(mp)
+
+	data, err := decoder.Decode()
+	if err != nil {
+		return "", fmt.Errorf("MessagePack decode error: %v", err)
+	}
+
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		return "", fmt.Errorf("JSON marshal error: %v", err)
+	}
+	return string(jsonData), nil
 }
