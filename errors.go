@@ -12,6 +12,7 @@ const (
 	ErrCodeBinaryTooLong
 	ErrCodeBinaryDataInvalid
 	ErrCodeInitConstants
+	ErrCodeArrayTooLong
 )
 
 const (
@@ -21,6 +22,7 @@ const (
 	ErrStrBinaryTooLong     = "BinaryTooLong"
 	ErrStrBinaryDataInvalid = "BinaryDataInvalid"
 	ErrStrInitConstants     = "InitConstants"
+	ErrStrArrayTooLong      = "ArrayTooLong"
 )
 
 var (
@@ -30,6 +32,7 @@ var (
 	ErrBinaryTooLong     = ErrorType{ErrCode: ErrCodeBinaryTooLong, ErrStr: ErrStrBinaryTooLong}
 	ErrBinaryDataInvalid = ErrorType{ErrCode: ErrCodeBinaryDataInvalid, ErrStr: ErrStrBinaryDataInvalid}
 	ErrInitConstants     = ErrorType{ErrCode: ErrCodeInitConstants, ErrStr: ErrStrInitConstants}
+	ErrArrayTooLong      = ErrorType{ErrCode: ErrCodeArrayTooLong, ErrStr: ErrStrArrayTooLong}
 )
 
 func (e ErrorType) Error() string {

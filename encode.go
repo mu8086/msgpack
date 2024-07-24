@@ -22,6 +22,9 @@ func encode(buf *bytes.Buffer, data interface{}) error {
 		}
 		return encodeFloat(buf, v)
 
+	case []interface{}:
+		return encodeArray(buf, v)
+
 	case map[string]interface{}:
 		return encodeMap(buf, v)
 
@@ -32,6 +35,37 @@ func encode(buf *bytes.Buffer, data interface{}) error {
 		fmt.Printf("v: %T, %v\n", v, v)
 		return ErrUnsupportedType
 	}
+}
+
+func encodeArray(buf *bytes.Buffer, value []interface{}) error {
+	length := len(value)
+
+	switch {
+	// fixarray (0x90 ~ 0x9F)
+	case length <= 0xF:
+		buf.WriteByte(0x90 | byte(length))
+
+	// array 16 (0xDC)
+	case length <= 0xFFFF:
+		buf.WriteByte(0xDC)
+		binary.Write(buf, binary.BigEndian, int16(length))
+
+	// array 32 (0xDD)
+	case length <= 0xFFFFFFFF:
+		buf.WriteByte(0xDD)
+		binary.Write(buf, binary.BigEndian, int32(length))
+
+	default:
+		return ErrArrayTooLong
+	}
+
+	for _, element := range value {
+		if err := encode(buf, element); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func encodeBinary(buf *bytes.Buffer, value interface{}) error {
