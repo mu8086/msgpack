@@ -2,11 +2,11 @@ package msgpack
 
 import (
 	"bytes"
+	"strconv"
 	"strings"
 	"testing"
 )
 
-// TODO:
 func Test_encode(t *testing.T) {
 	var buf bytes.Buffer
 
@@ -15,8 +15,15 @@ func Test_encode(t *testing.T) {
 		arg     interface{}
 		wantErr error
 	}{
-		{name: "integer", arg: 1, wantErr: ErrUnsupportedType},
+		{name: "integer", arg: 1, wantErr: nil},
 		{name: "string", arg: "", wantErr: nil},
+		{name: "bool true", arg: true, wantErr: nil},
+		{name: "bool false", arg: false, wantErr: nil},
+		{name: "nil", arg: nil, wantErr: nil},
+		{name: "float", arg: 1.23, wantErr: nil},
+		{name: "array", arg: []interface{}{1, "test", true}, wantErr: nil},
+		{name: "map", arg: map[string]interface{}{"key": "value", "number": 42}, wantErr: nil},
+		{name: "unsupported type", arg: struct{}{}, wantErr: ErrUnsupportedType},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -42,9 +49,7 @@ func Test_encodeBool(t *testing.T) {
 		wantErr bool
 	}{
 		{name: "want false, got false", args: args{false, []byte{0xC2}}, wantErr: false},
-		// TODO: {name: "want false, got true", args: args{false, []byte{0xC3}}, wantErr: false},
 		{name: "want true, got true", args: args{true, []byte{0xC3}}, wantErr: false},
-		// TODO: {name: "want true, got false", args: args{true, []byte{0xC2}}, wantErr: false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -100,10 +105,135 @@ func Test_encodeString(t *testing.T) {
 
 			for _, prefixByte := range tt.args.encodedPrefix {
 				b, err := buf.ReadByte()
-				if b != prefixByte {
-					t.Errorf("prefix not match, want: %v, got: %v\n", prefixByte, b)
-				} else if err != nil {
+				if err != nil {
 					t.Errorf("buf.ReadByte() failed, err: %v\n", err)
+					break
+				}
+				if b != prefixByte {
+					t.Errorf("encoded prefix not match, want: %v, got: %v\n", prefixByte, b)
+				}
+			}
+		})
+	}
+}
+
+func Test_encodeFloat(t *testing.T) {
+	var buf bytes.Buffer
+
+	tests := []struct {
+		name    string
+		value   float64
+		encoded []byte
+		wantErr bool
+	}{
+		{name: "float32", value: float64(float32(1.23)), encoded: []byte{0xCA, 0x3F, 0x9D, 0x70, 0xA4}, wantErr: false},
+		{name: "float64", value: 1.23, encoded: []byte{0xCB, 0x3F, 0xF3, 0xAE, 0x14, 0x7A, 0xE1, 0x47, 0xAE}, wantErr: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			buf.Reset()
+
+			if err := encodeFloat(&buf, tt.value); (err != nil) != tt.wantErr {
+				t.Errorf("encodeFloat() error = %v, wantErr %v", err, tt.wantErr)
+			}
+
+			for _, b := range tt.encoded {
+				got, err := buf.ReadByte()
+				if err != nil {
+					t.Errorf("buf.ReadByte() failed, err: %v\n", err)
+					break
+				}
+				if got != b {
+					t.Errorf("encoded not match, want: %v, got: %v\n", b, got)
+				}
+			}
+		})
+	}
+}
+
+func Test_encodeArray(t *testing.T) {
+	var buf bytes.Buffer
+
+	tests := []struct {
+		name    string
+		value   []interface{}
+		encoded []byte
+		wantErr bool
+	}{
+		{name: "empty array", value: []interface{}{}, encoded: []byte{0x90}, wantErr: false},
+		{name: "fixarray", value: []interface{}{1, "test", true}, encoded: []byte{0x93, 0x01, 0xA4, 't', 'e', 's', 't', 0xC3}, wantErr: false},
+		{name: "array 16", value: make([]interface{}, 20), encoded: []byte{0xDC, 0x00, 0x14}, wantErr: false},
+		{name: "array 32", value: make([]interface{}, 70000), encoded: []byte{0xDD, 0x00, 0x01, 0x11, 0x70}, wantErr: false},
+		// {name: "array too long", value: make([]interface{}, 0x100000000), encoded: nil, wantErr: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			buf.Reset()
+
+			if err := encodeArray(&buf, tt.value); (err != nil) != tt.wantErr {
+				t.Errorf("encodeArray() error = %v, wantErr %v", err, tt.wantErr)
+			}
+
+			if tt.encoded != nil {
+				for _, b := range tt.encoded {
+					got, err := buf.ReadByte()
+					if err != nil {
+						t.Errorf("buf.ReadByte() failed, err: %v\n", err)
+						break
+					}
+					if got != b {
+						t.Errorf("encoded not match, want: %v, got: %v\n", b, got)
+					}
+				}
+			}
+		})
+	}
+}
+
+func Test_encodeMap(t *testing.T) {
+	var buf bytes.Buffer
+
+	mapWithSize := func(size int) map[string]interface{} {
+		m := make(map[string]interface{})
+		for i := 0; i < size; i++ {
+			m[strconv.Itoa(i)] = 1
+		}
+		return m
+	}
+
+	map20 := mapWithSize(20)
+	map70000 := mapWithSize(70000)
+
+	tests := []struct {
+		name    string
+		value   map[string]interface{}
+		encoded []byte
+		wantErr bool
+	}{
+		{name: "empty map", value: map[string]interface{}{}, encoded: []byte{0x80}, wantErr: false},
+		{name: "fixmap", value: map[string]interface{}{"key": "value"}, encoded: []byte{0x81, 0xA3, 'k', 'e', 'y', 0xA5, 'v', 'a', 'l', 'u', 'e'}, wantErr: false},
+		{name: "map 16", value: map20, encoded: []byte{0xDE, 0x00, 0x14}, wantErr: false},
+		{name: "map 32", value: map70000, encoded: []byte{0xDF, 0x00, 0x01, 0x11, 0x70}, wantErr: false},
+		// {name: "map too long", value: make(map[string]interface{}, 0x100000000), encoded: nil, wantErr: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			buf.Reset()
+
+			if err := encodeMap(&buf, tt.value); (err != nil) != tt.wantErr {
+				t.Errorf("encodeMap() error = %v, wantErr %v", err, tt.wantErr)
+			}
+
+			if tt.encoded != nil {
+				for _, b := range tt.encoded {
+					got, err := buf.ReadByte()
+					if err != nil {
+						t.Errorf("buf.ReadByte() failed, err: %v\n", err)
+						break
+					}
+					if got != b {
+						t.Errorf("encoded not match, want: %v, got: %v\n", b, got)
+					}
 				}
 			}
 		})

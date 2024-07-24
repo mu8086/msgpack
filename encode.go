@@ -24,6 +24,12 @@ func encode(buf *bytes.Buffer, data interface{}) error {
 		}
 		return encodeFloat(buf, v)
 
+	case int:
+		return encodeInt(buf, int64(v))
+
+	case int64:
+		return encodeInt(buf, v)
+
 	case []interface{}:
 		return encodeArray(buf, v)
 
@@ -35,6 +41,12 @@ func encode(buf *bytes.Buffer, data interface{}) error {
 
 	case string:
 		return encodeString(buf, v)
+
+	case uint:
+		return encodeUint(buf, uint64(v))
+
+	case uint64:
+		return encodeUint(buf, v)
 
 	default:
 		fmt.Printf("%v Unsupported Type: %T\n", tag, v)

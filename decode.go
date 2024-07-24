@@ -227,10 +227,6 @@ func (dec *MessagePackDecoder) readBinWithLengthInBits(lengthInBits int) ([]byte
 	return binData, nil
 }
 
-func (dec *MessagePackDecoder) readBytes(data interface{}) error {
-	return binary.Read(dec.reader, binary.BigEndian, &data)
-}
-
 func (dec *MessagePackDecoder) readFloat32() (data float32, err error) {
 	err = binary.Read(dec.reader, binary.BigEndian, &data)
 	return data, err
