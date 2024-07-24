@@ -22,28 +22,8 @@ func main() {
 
 	jsonData := []byte(
 		`{
-			"friends": [
-				{
-					"id": 0,
-					"name": "Swanson Ayers"
-				},
-				true,
-				"string",
-				4,
-				5,
-				6,
-				7,
-				8,
-				9,
-				10,
-				11,
-				12,
-				13,
-				14,
-				15,
-				16
-			]
-		}`)
+			"a": null
+		 }`)
 
 	mp, err := msgpack.JSONToMessagePack(jsonData)
 	fmt.Printf("mp: %v, err: %v\n", formatBytecode(mp), err)

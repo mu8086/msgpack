@@ -28,6 +28,9 @@ func encode(buf *bytes.Buffer, data interface{}) error {
 	case map[string]interface{}:
 		return encodeMap(buf, v)
 
+	case nil:
+		return encodeNil(buf, v)
+
 	case string:
 		return encodeString(buf, v)
 
@@ -203,6 +206,11 @@ func encodeMap(buf *bytes.Buffer, value map[string]interface{}) error {
 			}
 		}
 	}
+	return nil
+}
+
+func encodeNil(buf *bytes.Buffer, _ interface{}) error {
+	buf.WriteByte(0xC0)
 	return nil
 }
 
