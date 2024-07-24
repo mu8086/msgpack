@@ -3,6 +3,7 @@ package msgpack
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 	"math"
 )
 
@@ -20,10 +21,14 @@ func encode(buf *bytes.Buffer, data interface{}) error {
 		}
 		return encodeFloat(buf, v)
 
+	case map[string]interface{}:
+		return encodeMap(buf, v)
+
 	case string:
 		return encodeString(buf, v)
 
 	default:
+		fmt.Printf("v: %T, %v\n", v, v)
 		return ErrUnsupportedType
 	}
 }
@@ -86,6 +91,39 @@ func encodeInt(buf *bytes.Buffer, value int64) error {
 		return ErrValueOutOfRange
 	}
 
+	return nil
+}
+
+func encodeMap(buf *bytes.Buffer, value map[string]interface{}) error {
+	length := len(value)
+
+	switch {
+	//fixmap (0x80 ~ 0x8F)
+	case length <= 0xF:
+		buf.WriteByte(0x80 | byte(length))
+
+	// map 16 (0xDE)
+	case length <= 0xFFFF:
+		buf.WriteByte(0xDE)
+		binary.Write(buf, binary.BigEndian, int16(length))
+
+	// map 32 (0xDF)
+	case length <= 0xFFFFFFFF:
+		buf.WriteByte(0xDF)
+		binary.Write(buf, binary.BigEndian, int32(length))
+
+	default:
+		return ErrValueOutOfRange
+	}
+
+	for key, val := range value {
+		if err := encodeString(buf, key); err != nil {
+			return err
+		}
+		if err := encode(buf, val); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

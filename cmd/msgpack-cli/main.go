@@ -7,10 +7,28 @@ import (
 )
 
 func main() {
-	jsonData := []byte(`9007199254740994`)
+	jsonData := []byte(
+		`{
+			"0": true,
+			"1": true,
+			"2": true,
+			"3": true,
+			"4": true,
+			"5": true,
+			"6": true,
+			"7": true,
+			"8": true,
+			"9": true,
+			"A": true,
+			"B": true,
+			"C": true,
+			"D": true,
+			"E": true,
+			"F": true
+		}`)
 
 	mp, err := msgpack.JSONToMessagePack(jsonData)
-	fmt.Printf("mp: %v (%v), err: %v\n", formatBytecode(mp), string(mp), err)
+	fmt.Printf("mp: %v, err: %v\n", formatBytecode(mp), err)
 }
 
 // TODO: remove
